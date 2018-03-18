@@ -1,0 +1,270 @@
+\documentclass[12pt]{article}
+\usepackage{geometry}    
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{nth}
+\usepackage{tikz}
+\usetikzlibrary{arrows, chains,trees,matrix}
+\hypersetup{
+	colorlinks,
+	citecolor=black,
+	filecolor=black,
+	linkcolor=black,
+	urlcolor=black
+}
+\geometry{letterpaper}
+
+\title{\vspace{-1.5cm}Porting the Swift 3.1 Programming Language to Haiku}
+\pagestyle{fancy}
+\fancyhf{}
+\begin{document}
+\date{}
+\author{Joseph Calvin Hill, (return0e)\\ calvin@hakobaito.co.uk\\London, UK,\\
+IRC: return0e, Trac: return\_0e\\
+Trac/Github tickets: (\href{http://github.com/haikuports/haikuports/pull/1238}{\#1238}, \href{http://github.com/haikuports/haikuports/pull/1268}{\#1268} , \href{http://github.com/haikuports/haikuports/pull/1269}{\#1269} )\\
+Github: @return\\}
+\maketitle
+\thispagestyle{fancy}
+\vspace{-1cm}
+
+% Once the language compiler is written in its own language (self-hosting), the common options for supporting new platform are as follows: Port the older compiler first for bootstrapping and compile the newer one or Port the new compiler and cross-compile it to the target platform.is required with an Making it harder to target as a supported platform.
+\begin{center}
+ \begin{tabular}{l}
+Q: Will you treat Google Summer of Code as full time employment? \\
+A: I will treat GSoC as full time employment.\\
+\\
+Q: How many hours per week will you work? \\
+A: I am able to work 35 - 60 hours per week during the coding weeks. \\\\Time allocations are as follows:\\
+May  \nth{4} - June \nth{15} \ \ \ \ \ \ \  38 Hours pw\\ 
+June \nth{16} - July \nth{16} \ \ \ \ \  \ 60 Hours pw\\
+July \nth{17} - August \nth{1} \ \ \ \ \ 50 Hours pw\\
+August \nth{2} - August \nth{31} 55 Hours pw
+\vspace{0.6cm}
+\\
+List all obligations (and their dates) that may take time away from GSoC:\\\\
+I am currently 8 months in on my 9 - 5 work placement (Ends in July \nth{31}) \\
+and can take time off to work on GSoC full-time.
+\\\\
+Q: Are you using Google Summer of Code to fulfil a university requirement? \\
+A: No.\\
+\\
+Estimated last day of classes/exams: 
+\\ N/A No exams this year.\\\\
+Estimated first day of classes:
+\\ October \nth{3}.
+\\\\
+\end{tabular}
+\end{center}
+\hypersetup{ linkcolor=blue}
+% Introduction
+\section*{Introduction}
+% Introduction
+Haiku supports various compiled and interpreted programming languages for developers to choose from, mostly ported via haikuporter recipes. Both POSIX and haikuporter have eased the porting process and addressed the lack of platform support for more sophisticated compilers and libraries such as GCC 4+, LLVM and Clang. Newer languages such as Go and Rust have Haiku support, but are in the form of patches and Haiku still misses out on being a tier 1 target for these languages. Fortunately, Swift 3.1's focus on portability makes it possible to add Haiku as a target just like other platforms such as Linux, FreeBSD and Android due to mostly being POSIX compliant. Therefore, I believe that this proposal to port Swift 3.1 to Haiku and to prepare these patches for merging upstream is a feasible project to complete within the GSoC period.
+\\
+% About Swift
+\section*{About Swift}
+% About Swift
+According to the Swift.org website, it defines Swift as \textit{'a general-purpose programming language built using a modern approach to safety, performance, and software design patterns.'}\hyperlink{(1)}{(1)} Swift has several features found in other languages such as closures, generics, tuples, type inference, etc but includes exclusive features such as optional types that checks a variable that \textit{"there is a value and it equals x or there isn't a value at all"} \hyperlink{(2)}{(2)}, which always initialises values before using them as attempting to directly set a object to a null pointer is disallowed in Swift.
+\\
+\\
+Since Swift 2.2 was open-sourced in December 2015, it has been ported to a number of platforms such as Linux, Android, FreeBSD and Cygwin. Moreover, the growing ecosystem and popularity of the language is hard to ignore, such that it is already among one of the most popular languages according to the 2016 StackOverflow Developer survey \hyperlink{(3)}{(3)} and was recently ranked \nth{10} in the TIOBE index \hyperlink{(4)}{(4)}. Swift can be used for various purposes ranging from teaching programming to systems programming or server-side development.
+
+% Goals
+\section*{Goals}
+% Goals
+The bare minimum components that need to be ported in-order to make Swift functional on Haiku (excluding external dependencies and the forked versions of LLVM and Clang)\hyperlink{(5)}{(5)}, are: 
+\\\\
+\textbullet \ \ The swift compiler (swiftc) \\
+\textbullet \ \ The standard library (stdlib) \\ \textbullet \ \ Swift Core Libraries framework(s) (swift-corelibs-foundation)
+\\
+\\
+After reviewing the required fixes to both Haiku and Swift, the realistic goals that can be met within the duration of GSoC are as follows: 
+\\
+\\
+\textbullet \ \ Building the compiler and standard libraries by using swift-clang and swift-llvm. \\
+\textbullet \ \ Porting the core libraries to Haiku.  \\
+\textbullet \ \ Ability to compile / run swift programs built with swiftc. \\
+\textbullet \ \ Testing the built compiler and add Haiku as a stdlib test (stdlibTest) platform. \\
+\textbullet \ \ Clean up platform support and prepare changes for upstreaming.
+\\\\
+For the best chances of fulfilling this proposal, I have already patched (swift-llvm, and swift-clang) so that they can build themselves, and patched the 'build-script'\hyperlink{(1A)}{(1A)} and added a early recipe \hyperlink{(1B)}{(1B)} for Haiku support which will be available on my GitHub forks \hyperlink{(6)}{(6)}. The FreeBSD port based on Swift 2.2 \hyperlink{(7)}{(7)}\hyperlink{(8)}{(8)} will be used as a reference for adapting the specific libraries that Haiku needs.  
+
+% Project Timeline
+\section*{Project Timeline}
+% Project Timeline
+
+My suggested plan for achieving these goals are heavily based on rough estimations. Because of this, I set a maximum limit on the weeks spent on a subgoal. 
+
+\subsection*{Community Bonding Period -- (May \nth{1} - May \nth{30})}
+During the community bonding period, I'll introduce myself to both the Haiku and Swift communities on the project whilst familiarising with the swift compiler architecture and to discuss with my mentors on building swiftc. I'll allocate 6 - 7 hours every day in patching and communicating with my mentors. 
+\\\\
+Building requires the forked LLVM/Clang components, as they have swift-specific compiler attributes added: \\ \textbf{swift\_private, swift\_name, swift\_error and swift\_newtype}, which are all used to bridge between Objective-C and C declarations into Swift. \hyperlink{(10)}{(10)}
+\\\\
+For upstream support, I intend to support only x86\_64 for Swift. While it is possible to port to 32 bit systems in the past, \hyperlink{(11)}{(11)} (in the case for Linux) if this doesn't interfere with Swift.orgs' goals, then supporting 32 bit may be considered in the future.
+\\\\
+I intend not to take time off during this period, The weekly schedule for this timeline are as follows:
+
+
+\subsection*{Week 1/2 (May \nth{4} - May \nth{18}) }
+\textbullet \ \ \ Add Haiku x86\_64 platform recognition in build\_script\\
+\textbullet \ \ \ Add Haiku as a standard library target\\
+\textbullet \ \ \ Add Haiku support for validation tests\\
+\textbullet \ \ \ Complete full platform build-script support for Haiku. \\
+\\
+File(s) related to this task: \textbf{build-script.py and build-script-impl.py toolchain.py, targets.py, AddSwift.cmake, FindICU.cmake, CMakeLists.txt}
+\\\\
+I'll discuss with my mentor(s) on the recommended changes for integrating a new platform and will allocate a maximum of 2 weeks for build-script support.
+\\\\
+If this is achieved in less than that, I'll add more platform support for the standard libraries, runtime and to add stdlib-validation-tests for Haiku (In validation-test/StdlibUnittest).
+
+\subsection*{Week 3 (May \nth{19} - May \nth{25})}
+
+\textbullet \ \ \ Investigate corelibs-foundation library support (Foundation)\\
+\textbullet \ \ \ Discuss libdispatch support for Haiku (optional).
+\\\\
+I'll be attempting to build the swift compiler with these changes. I'll expect some errors in the compilation process, possibly in the lib folder which contains the LLVM compiler backed that swift uses. I'll ask my mentor(s) about the specific areas that need patching for upstreaming, before porting it.
+
+\subsection*{Week 4 (May \nth{26} - June \nth{1})}
+\textbullet \ \ \ Support optional build-script features\\
+\textbullet \ \ \ Submit initial Haiku support patches upstream.\\
+\textbullet \ \ \ Update Swift recipe. \\
+\\
+LLVM/Clang based patches may only be for haikuports to compile the swift toolchain.
+
+% Project Timeline
+\subsection*{\nth{1} Coding Period -- (June \nth{1} - June \nth{30})}
+% Project Timeline
+The Swift compiler backend in the /lib folder contains the Parser, AST and the SIL (Swift Intermediate Language) and the rest of the compiler internals which is written in C++. After porting the compiler backend, swiftCore and stdlib will later be ported. They contain the standard objects available in all swift programs such as 'String, Array, and Collection'. The standard library core found in 'stdlib/public/core' is written in Swift itself \hyperlink{(12)}{(12)}, but fortunately the standard library core does not contain any platform-specific code present in the core so porting it shouldn't be a problem. I estimate a maximum of two weeks to port both of them to Haiku.
+\\\\
+After June \nth{16}, I can dedicate more time (60 Hours pw) working in this period, as I'll be free for more than a month.
+
+\subsection*{Week 5/6 (June \nth{2} - June \nth{16})}
+\textbullet \ \ Modify the compiler backend (lib/Driver and lib/Basic) for Haiku support.\\
+\textbullet \ \ Build swift toolchain using Clang and LLVM.\\
+\textbullet \ \ Run tests against swiftc via the integrated testsuite. \\
+\textbullet \ \  swift test-cases for Haiku.\\
+\\
+File(s) related to this task: \\
+\textbullet \ \ Swift/lib/Driver/ToolChains.h \\
+\textbullet \ \ Swift/lib/Basic/Unix/TaskQueue.inc  \\
+\textbullet \ \ stdlib/public/Platform/Platform.swift  \\
+\textbullet \ \ stdlib/public/Core/CTypes.swift  \\
+\textbullet \ \ stdlib/private/SwiftPrivatePthread \\
+\textbullet \ \ stdlib/private/StdlibUnitTest  \\
+
+
+With each of these changes made, they will be tested and refactored for correctness which will be reviewed by my mentor on Haiku's POSIX layer and also reviewed by the swift maintainers so that the new compiler, runtime and it's associate libraries are tested to work as expected.
+
+\subsection*{Week 7 (June \nth{17} - June \nth{23})}
+
+\textbullet \ \ Continue to test swift against testsuite (unittests)
+
+\subsection*{Week 8 (June \nth{24} - July \nth{1})}
+\textbullet \ \ Review compiler patches with mentor(s) \\
+\textbullet \ \ Refactor/Finalise patches and merge swift compiler support upstream.\\
+\textbullet \ \ Update recipe with the aforementioned changes.\\
+\textbullet \ \ Focus on bringing up Foundation \& CoreFoundation support.\\
+\\
+I'll discussing the platform requirements with my mentor(s) on porting the corelibs before July.
+
+\subsection*{\nth{2} Coding Period -- (July \nth{1} - July \nth{30})}
+The 'Foundation' Framework in the Swift core libraries \hyperlink{(13)}{(13)} provides basic utility classes outside of the runtime and porting this will be the most challenging part of this period. Written in C, it servers as a re-implementation of Apple's Foundation framework found in macOS and iOS platforms but independent of using the Objective-C runtime; thus using POSIX libaries instead to increase portability. Although it isn't required to build swift, it will be required if a developer wishes to use an external library that depends on it.
+\\\\
+During July \nth{1} to July \nth{16} I'll allocate 10 hours a day in focusing to port CoreFoundation, since I'll be still off from work. Therefore, I can dedicate into spending my time porting these libraries.
+
+\subsection*{Week 9 (July \nth{2} - July \nth{9})}
+\textbullet \ \ \ Add the Haiku platform SDK to build.py and target.py\\
+\textbullet \ \ \ Add platform definitions to CoreFoundation library files. \\\\
+File(s) related to this task:\\
+\textbullet \ \ build.py \\
+\textbullet \ \ target.py (Platform Target) \\
+\textbullet \ \ CoreFoundation/*  (Lower level interface to Foundation.)
+
+\subsection*{Week 10 (July \nth{10} - July \nth{18})}
+\textbullet \ \ \ Add Haiku as a platform in Host.swift and Platform.swift\\
+\textbullet \ \ \ Patch the higher level Foundation libraries. \\
+\textbullet \ \ \ Compile applications using foundation with swiftc \\
+\textbullet \ \ \ Build Foundation and test functionality via swift-corelibs-xctest\\
+\\File(s) related to this task:\\
+\textbullet \ \ Host.swfit, Platform.swift (Build support)\\
+\textbullet \ \ target.py (Platform Target) \\
+\textbullet \ \ CoreFoundation/*  (Lower level interface to Foundation.)
+
+
+\subsection*{Week 11 (July \nth{19} - July \nth{26})}
+\textbullet \ \ \ Add networking support via NSURLSession libraries.\\
+\textbullet \ \ \ Implement/Add missing library support (NSDate/Process)\\
+\\
+File(s) related to this task:\\
+\textbullet \ \ Processes.swift (Part of process spawning test cases) \\
+\textbullet \ \ Subprocess.swift (Supported in standard library) \\
+\\
+Process spawning related modules such as TestProcess.swift, Processes.swift and Subprocess.swift all use the standard `posix\_spawn()' function which are inculded from spawn.h libraries and are currently unimplemented in libroot. Possible workarounds for this are: \\
+\\
+\textbullet \ \ \ Disable support for spawning for now. \\
+\textbullet \ \ \ Use fork+exec() for spawning processes. \\
+\textbullet \ \ \ Implement spawn.h library for Haiku. (Preferred)\\
+\\
+Implementing spawn.h was mentioned in the chat logs earlier \hyperlink{(14)}{(14)}. I'll discuss this with my mentor on doing this properly (Using BRoster::Launch / runtime\_loader functions) so that it can pass the sub-processing library tests.
+
+\subsection*{Week 12 (July \nth{27} - August \nth{3})}
+\textbullet \ \ \ Clean up and prepare CoreFoundation patches for review. \\
+\textbullet \ \ \ Update swift recipe to reflect more changes.\\
+
+\subsection*{\nth{3} Coding Period (August \nth{1} - August \nth{31})}
+
+\subsection*{Week 13/14/15 (August \nth{4} - August \nth{18})}
+In August, I plan to further test swiftc by using the build-script and to add Haiku as a test platform for the standard library. These tests will cover POSIX functionality \hyperlink{(15)}{(15)}, where I expect issues when testing on Haiku.\\
+\\
+Hence this, I'll be using Haiku's open-posix test-suite that covers POSIX compliance on standard functions that are defined in the operating system. I will aim to test the CoreFoundation / Libraries for correctness as well as the standard library under the tests that swift provide for about 2 - 3 weeks, as these tests will be needed for correctness of all components.  If required, I'll add the test cases for the Haiku platform. 
+\subsection*{Week 16/17 (August \nth{19} - August \nth{31})}
+I'll spend 2 weeks on cleaning up some platform code, fixing bugs encountered during the porting process and finalising my patches for merging with the stable branch. From there, the swift recipe should be able to build and compile the swift toolchain without fail within the duration of this project. 
+
+
+\subsection*{After Google Summer of Code}
+This porting task deals with the essential components to get Swift functional on Haiku and ready to be a supported target. There is still more to do after GSoC (LLDB for Swift REPL support, libdispatch for threading, etc. Even after GSoC I will continue to improve Haiku support for Swift and will certainly continue to contribute to Haiku by both sending patches via Trac, and porting more sophisticated software. Furthermore, once Swift support for Haiku is merged, I seek to further study Haiku's internals to help in supporting newer architectures.
+    
+% About
+\section*{About}
+% About
+I'm a second year university student studying Computer Science at the University of Hull with interests in OS internals, compilers, embedded devices, computer security and contributing open source/FLOSS projects. In my spare time I contribute via the haikuports organisation to support more third party applications and libraries for Haiku.
+\\\\
+I have experience in developing software in C, C++, Objective-C, Go and Python on multiple platforms. Since late 2014, I've used Haiku on a USB for mainly learning the Haiku API for writing native Haiku apps.
+% Why Haiku
+\subsection*{Why Haiku?}
+% Why Haiku
+One of the reasons I selected the Haiku project was mainly due to it's core philosophy for being an alternative desktop OS for all-types of users whilst promoting usability, performance and retaining BeOS R5 app compatibility. But the one idea that distinguishes it from other open source OSes is its software components are tightly integrated with the OS from the bootloader to the applications, which is considered rare for a open source OS project. Due to this level of consistency I have been using it ever since.
+\\\\
+On the developer perspective, I have looked at the Haiku Book and BeOS: Porting UNIX applications book to join in the porting efforts. There was some BeOS Sample code from Be Inc, which was useful for testing out BeOS APIs but trying some of them with Haiku obviously failed to compile. So I am currently hosting the sample code for archiving purposes and for everyone to see on Github, with the aim of porting it from BeOS to Haiku for my own learning and to try on Haiku.
+% Expectations from Mentors
+\section*{Expectations from Mentors}
+% Expectations from Mentors
+As this proposal involves knowledge around libroot, runtime\_loader and the posix layer, I would expect some expertise from my selected mentors around those particular areas. This project might involve modifying the posix layer to solve some of the tests that is built into swift.
+
+\vspace{0.25cm}
+% References
+\section*{References}
+% References
+\hypertarget{(1)}{(1)} Swift.org, (2015), [online] Available at: \href{https://swift.org/about/}{https://swift.org/about/} \\\ [Accessed 23 Mar. 2017].\vspace{0.25cm}\\
+\\\hypertarget{(2)}{(2)} The Swift Programming Language, (2017), 3rd ed, [ebook] Cupertino, CA: Apple Inc, 35, Available at: \href{https://swift.org/documentation/}{https://swift.org/documentation/} [Accessed 23 Mar. 2017].\\
+\\\hypertarget{(3)}{(3)} Stack Overflow, (2017), Stack Overflow Developer Survey 2017, [online] Available at: \href{https://stackoverflow.com/insights/survey/2017\#most-loved-dreaded-and-wanted}{https://stackoverflow.com/insights/survey/2017\#most-loved-dreaded-and-wanted} [Accessed 22 Mar. 2017]. \vspace{0.25cm}\\
+\\\hypertarget{(4)}{(4)} Tiobe.com, (2017), TIOBE Index | TIOBE - The Software Quality Company. [online] Available at: \href{https://www.tiobe.com/tiobe-index/}{https://www.tiobe.com/tiobe-index/} [Accessed 22 Mar. 2017]. \vspace{-0.125cm}\\
+\\\hypertarget{(5)}{(5)} \href{https://swift.org/source-code/\#cloned-repositories}{https://swift.org/source-code/\#cloned-repositories} \vspace{0.125cm}\\
+\\\hypertarget{(6)}{(6)} \href{https://github.com/return/swift-llvm/tree/swift-3.1-haiku}{https://github.com/return/swift-llvm/tree/swift-3.1-haiku}\vspace{0.125cm}\\
+\\\hypertarget{(7)}{(7)} \href{https://lists.swift.org/pipermail/swift-dev/Week-of-Mon-20151207/000294.html}{https://lists.swift.org/pipermail/swift-dev/Week-of-Mon-20151207/000294.html} \vspace{0.125cm}\\
+\\\hypertarget{(8)}{(8)} \href{https://github.com/apple/swift/pull/4804}{https://github.com/apple/swift/pull/4804}\vspace{0.125cm}\\
+\\\hypertarget{(9)}{(9)} \href{https://github.com/apple/swift/tree/swift-3.1-RELEASE/cmake/modules}{https://github.com/apple/swift/tree/swift-3.1-RELEASE/cmake/modules}\vspace{0.125cm}\\
+\\\hypertarget{(10)}{(10)} \href{http://lists.llvm.org/pipermail/cfe-dev/2015-December/046335.html}{http://lists.llvm.org/pipermail/cfe-dev/2015-December/046335.html}\vspace{0.125cm}\\
+\\\hypertarget{(11)}{(11)} \href{https://lists.swift.org/pipermail/swift-dev/2015-December/000030.html}{https://lists.swift.org/pipermail/swift-dev/2015-December/000030.html}\vspace{0.125cm}\\
+\\\hypertarget{(12)}{(12)} \href{https://github.com/apple/swift/tree/swift-3.1-RELEASE/stdlib/public/core}{https://github.com/apple/swift/tree/swift-3.1-RELEASE/stdlib/public/core}\vspace{0.125cm}\\
+\\\hypertarget{(13)}{(13)} \href{https://swift.org/core-libraries/\#foundation}{https://swift.org/core-libraries/\#foundation}\vspace{0.125cm}\\
+\\\hypertarget{(14)}{(14)} \href{https://echelog.com/logs/browse/haiku/1377986400}{https://echelog.com/logs/browse/haiku/1377986400}\vspace{0.125cm}\\
+\\\hypertarget{(15)}{(15)} \href{https://github.com/apple/swift-corelibs-foundation/blob/master/TestFoundation/TestProcess.swift}{https://github.com/apple/swift-corelibs-foundation/blob/master/\\TestFoundation/TestProcess.swift}\vspace{0.125cm}\\
+\\\hypertarget{(1A)}{(1A)} \href{https://github.com/return/swift/commit/c8253ab3afa238c16ca9389d169c0659dc10b520}{https://github.com/return/swift/commit/c8253ab3afa238c16ca9389d169c0659dc10b520} 
+\\\\
+\hypertarget{(1B)}{(1B)} \href{https://github.com/return/haikuports/commit/66531b0698259deeca001c73e4e3f87f9dcf9115}{https://github.com/return/haikuports/commit/66531b0698259deeca001c73e4e3f87f9dcf9115}
+
+\end{document}
+
